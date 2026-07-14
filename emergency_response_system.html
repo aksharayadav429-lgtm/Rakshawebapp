@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAKSHA — AI Emergency Response &amp; Disaster Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0F14;
+    --panel:#121821;
+    --panel-2:#182130;
+    --line:#26313f;
+    --text:#E8EDF2;
+    --muted:#7C8798;
+    --signal:#2FB8C6;     /* AI / system accent (cyan-teal) */
+    --signal-dim:#1a5a61;
+    --high:#E8452C;
+    --medium:#E8A93B;
+    --low:#3BA55D;
+    --radius:4px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;}
+  ::selection{background:var(--signal-dim);}
+  h1,h2,h3,h4{font-family:'Oswald',sans-serif;letter-spacing:.02em;margin:0;text-transform:uppercase;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  button{font-family:'IBM Plex Sans',sans-serif;cursor:pointer;}
+  input,textarea,select{font-family:'IBM Plex Sans',sans-serif;}
+  a{color:var(--signal);}
+
+  /* ===== Ticker ===== */
+  #ticker-wrap{background:#080B0F;border-bottom:1px solid var(--line);overflow:hidden;white-space:nowrap;height:28px;display:flex;align-items:center;}
+  #ticker-label{flex:0 0 auto;background:var(--high);color:#0B0F14;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:0 10px;height:28px;display:flex;align-items:center;letter-spacing:.08em;}
+  #ticker{flex:1;overflow:hidden;position:relative;height:28px;}
+  #ticker-track{position:absolute;white-space:nowrap;animation:scroll-left 30s linear infinite;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);line-height:28px;}
+  @keyframes scroll-left{0%{transform:translateX(100%);}100%{transform:translateX(-100%);}}
+
+  /* ===== Header / Nav ===== */
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--line);background:var(--panel);}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand-mark{width:30px;height:30px;border-radius:50%;background:conic-gradient(var(--signal) 0deg 270deg,var(--line) 270deg 360deg);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .brand-mark::after{content:'';width:16px;height:16px;border-radius:50%;background:var(--bg);}
+  .brand h1{font-size:19px;color:var(--text);}
+  .brand span{display:block;font-size:9px;color:var(--muted);letter-spacing:.15em;font-family:'IBM Plex Mono',monospace;}
+  nav{display:flex;gap:4px;}
+  .tab-btn{background:transparent;border:1px solid var(--line);color:var(--muted);padding:9px 16px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;border-radius:var(--radius);transition:.15s;}
+  .tab-btn:hover{color:var(--text);border-color:var(--signal);}
+  .tab-btn.active{background:var(--signal);border-color:var(--signal);color:#08181a;}
+
+  main{max-width:1180px;margin:0 auto;padding:24px;}
+  .view{display:none;}
+  .view.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;}
+  @media(max-width:860px){.grid{grid-template-columns:1fr;} header{flex-direction:column;gap:10px;align-items:flex-start;} nav{flex-wrap:wrap;}}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:18px;}
+  .card h3{font-size:14px;color:var(--signal);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+  .card h3 .idx{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px;}
+  .field input, .field textarea, .field select{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);padding:9px 10px;border-radius:var(--radius);font-size:13px;}
+  .field textarea{resize:vertical;min-height:70px;}
+  .field input:focus, .field textarea:focus, .field select:focus{outline:none;border-color:var(--signal);}
+  .row{display:flex;gap:10px;}
+  .row > *{flex:1;}
+
+  .btn{border:1px solid var(--line);background:var(--panel-2);color:var(--text);padding:9px 14px;border-radius:var(--radius);font-size:12px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;transition:.15s;}
+  .btn:hover{border-color:var(--signal);color:var(--signal);}
+  .btn:focus-visible{outline:2px solid var(--signal);outline-offset:2px;}
+  .btn-primary{background:var(--signal);border-color:var(--signal);color:#08181a;}
+  .btn-primary:hover{opacity:.88;color:#08181a;}
+  .btn-full{width:100%;}
+  .btn-ghost{background:transparent;}
+  .btn-sm{padding:5px 10px;font-size:11px;}
+
+  .sos-btn{width:100%;padding:22px;border-radius:8px;background:linear-gradient(180deg,#ff5b3d,var(--high));border:none;color:#fff;font-family:'Oswald',sans-serif;font-size:22px;letter-spacing:.1em;text-transform:uppercase;box-shadow:0 0 0 0 rgba(232,69,44,.5);animation:pulse 2s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(232,69,44,.45);}70%{box-shadow:0 0 0 16px rgba(232,69,44,0);}100%{box-shadow:0 0 0 0 rgba(232,69,44,0);}}
+  .sos-btn:active{transform:scale(.98);}
+
+  .chip{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 9px;border-radius:20px;font-family:'IBM Plex Mono',monospace;}
+  .chip.high{background:rgba(232,69,44,.15);color:var(--high);border:1px solid var(--high);}
+  .chip.medium{background:rgba(232,169,59,.15);color:var(--medium);border:1px solid var(--medium);}
+  .chip.low{background:rgba(59,165,93,.15);color:var(--low);border:1px solid var(--low);}
+  .chip::before{content:'●';font-size:8px;}
+
+  .muted{color:var(--muted);font-size:12px;}
+  .divider{height:1px;background:var(--line);margin:14px 0;}
+
+  /* login gate */
+  #login-gate{max-width:380px;margin:60px auto;}
+  #user-pill{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);}
+  #user-pill b{color:var(--text);}
+
+  /* report list */
+  .report-item{border:1px solid var(--line);border-radius:var(--radius);padding:12px;margin-bottom:8px;background:var(--panel-2);}
+  .report-item .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .report-item .type{font-weight:600;font-size:13px;}
+  .report-item .meta{font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+
+  /* image analysis */
+  #img-preview-wrap{display:none;margin-top:10px;}
+  #img-preview{width:100%;max-height:160px;object-fit:cover;border-radius:var(--radius);border:1px solid var(--line);}
+  .analysis-box{margin-top:10px;padding:10px;background:var(--bg);border:1px dashed var(--line);border-radius:var(--radius);font-size:12px;}
+  .meter{height:6px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:6px;}
+  .meter-fill{height:100%;border-radius:4px;transition:width .4s ease;}
+
+  /* mic */
+  .mic-btn{border:1px solid var(--line);background:var(--panel-2);color:var(--text);width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .mic-btn.listening{background:var(--high);border-color:var(--high);animation:pulse 1.2s infinite;}
+
+  /* chat */
+  #chat-window{height:360px;overflow-y:auto;border:1px solid var(--line);border-radius:var(--radius);padding:14px;background:var(--bg);display:flex;flex-direction:column;gap:10px;}
+  .msg{max-width:78%;padding:9px 12px;border-radius:10px;font-size:13px;line-height:1.5;}
+  .msg.bot{align-self:flex-start;background:var(--panel-2);border:1px solid var(--line);border-bottom-left-radius:2px;}
+  .msg.user{align-self:flex-end;background:var(--signal-dim);border:1px solid var(--signal);border-bottom-right-radius:2px;}
+  .msg b{color:var(--signal);}
+  .quick-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th{text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:8px;border-bottom:1px solid var(--line);}
+  td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tr:hover td{background:rgba(47,184,198,.04);}
+  select.assign{background:var(--bg);border:1px solid var(--line);color:var(--text);font-size:11px;padding:4px 6px;border-radius:var(--radius);}
+
+  .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;}
+  .stat .num{font-family:'Oswald',sans-serif;font-size:30px;color:var(--signal);}
+  .stat .label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+  @media(max-width:700px){.stat-row{grid-template-columns:1fr 1fr;}}
+
+  .filter-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+  .filter-bar select{background:var(--bg);border:1px solid var(--line);color:var(--text);padding:7px 10px;border-radius:var(--radius);font-size:12px;}
+
+  .shelter-item{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:12px;}
+  .shelter-item:last-child{border-bottom:none;}
+  .shelter-bar{width:100px;height:6px;background:var(--line);border-radius:4px;overflow:hidden;}
+  .shelter-fill{height:100%;background:var(--signal);}
+
+  footer{text-align:center;padding:28px;color:var(--muted);font-size:11px;border-top:1px solid var(--line);margin-top:30px;font-family:'IBM Plex Mono',monospace;}
+
+  #toast{position:fixed;bottom:20px;right:20px;background:var(--panel-2);border:1px solid var(--signal);color:var(--text);padding:12px 16px;border-radius:var(--radius);font-size:13px;max-width:320px;box-shadow:0 6px 20px rgba(0,0,0,.4);transform:translateY(20px);opacity:0;transition:.3s;pointer-events:none;z-index:50;}
+  #toast.show{transform:translateY(0);opacity:1;}
+  .proto-note{font-size:11px;color:var(--muted);border-left:2px solid var(--signal);padding:8px 10px;background:rgba(47,184,198,.06);margin-top:10px;line-height:1.5;}
+</style>
+</head>
+<body>
+
+<div id="ticker-wrap">
+  <div id="ticker-label">LIVE FEED</div>
+  <div id="ticker"><div id="ticker-track" class="mono">System initializing…</div></div>
+</div>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark"></div>
+    <div>
+      <h1>RAKSHA</h1>
+      <span>AI EMERGENCY RESPONSE &amp; DISASTER MANAGEMENT</span>
+    </div>
+  </div>
+  <nav>
+    <button class="tab-btn active" data-view="citizen">Citizen Portal</button>
+    <button class="tab-btn" data-view="chat">AI Assistant</button>
+    <button class="tab-btn" data-view="admin">Admin Dashboard</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ============ CITIZEN PORTAL ============ -->
+  <section id="view-citizen" class="view active">
+
+    <div id="login-gate" class="card">
+      <h3><span class="idx">01</span> Citizen Login</h3>
+      <div class="field"><label>Full name</label><input id="reg-name" placeholder="e.g. Anjali Rao"></div>
+      <div class="field"><label>Phone number</label><input id="reg-phone" placeholder="10-digit mobile number"></div>
+      <button class="btn btn-primary btn-full" onclick="loginUser()">Register / Continue</button>
+      <p class="muted" style="margin-top:10px;">Prototype login — no password, stored only in this session's memory.</p>
+    </div>
+
+    <div id="citizen-app" style="display:none;">
+      <div id="user-pill" class="card" style="display:flex;justify-content:space-between;">
+        <div>Signed in as <b id="user-name-display"></b></div>
+        <button class="btn btn-sm" onclick="logoutUser()">Switch user</button>
+      </div>
+
+      <div class="card">
+        <button class="sos-btn" onclick="fireSOS()">🚨 SOS — SEND EMERGENCY NOW</button>
+        <p class="muted" style="margin-top:10px;text-align:center;">One tap sends your live location with a HIGH priority alert to the response team.</p>
+      </div>
+
+      <div class="grid">
+        <div>
+          <div class="card">
+            <h3><span class="idx">02</span> Report an Emergency</h3>
+
+            <div class="field">
+              <label>Describe what's happening</label>
+              <div class="row" style="align-items:flex-start;">
+                <textarea id="report-desc" placeholder="e.g. There's a fire on the 2nd floor, smoke everywhere, two people trapped inside..."></textarea>
+                <button class="mic-btn" id="mic-btn" onclick="toggleMic()" title="Speak instead of typing">🎙️</button>
+              </div>
+              <p id="mic-status" class="muted" style="margin-top:4px;"></p>
+            </div>
+
+            <div class="field">
+              <label>Emergency type (auto-detected — override if needed)</label>
+              <select id="report-type">
+                <option value="auto">Let AI detect from description</option>
+                <option value="Fire">Fire</option>
+                <option value="Flood">Flood</option>
+                <option value="Earthquake">Earthquake</option>
+                <option value="Medical">Medical</option>
+                <option value="Accident">Accident</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Upload a photo (optional — AI estimates damage severity)</label>
+              <input type="file" id="img-input" accept="image/*" onchange="handleImageUpload(event)">
+              <div id="img-preview-wrap">
+                <img id="img-preview" alt="Uploaded emergency photo">
+                <div class="analysis-box" id="img-analysis">Analyzing image…</div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Location</label>
+              <div class="row">
+                <input id="report-loc" readonly placeholder="Not shared yet">
+                <button class="btn" style="flex:0 0 auto;" onclick="shareLocation()">📍 Share location</button>
+              </div>
+            </div>
+
+            <button class="btn btn-primary btn-full" onclick="submitReport()">Submit Report to AI Engine</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <h3><span class="idx">03</span> AI Engine Result</h3>
+            <div id="ai-result">
+              <p class="muted">Submit a report to see the AI's classification, priority level, and safety advice here.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3><span class="idx">04</span> My Reports</h3>
+            <div id="my-reports"><p class="muted">No reports yet.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ AI CHAT ASSISTANT ============ -->
+  <section id="view-chat" class="view">
+    <div class="card">
+      <h3><span class="idx">AI</span> Emergency Chat Assistant</h3>
+      <p class="muted" style="margin-bottom:12px;">Ask about safety instructions, first aid, or evacuation steps for any disaster type.</p>
+      <div id="chat-window"></div>
+      <div class="quick-row">
+        <button class="btn btn-sm" onclick="quickChat('Fire')">🔥 Fire</button>
+        <button class="btn btn-sm" onclick="quickChat('Flood')">🌊 Flood</button>
+        <button class="btn btn-sm" onclick="quickChat('Earthquake')">🏚️ Earthquake</button>
+        <button class="btn btn-sm" onclick="quickChat('Medical')">🩹 Medical</button>
+        <button class="btn btn-sm" onclick="quickChat('Accident')">🚗 Accident</button>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <input id="chat-input" placeholder="Type your question… e.g. 'What do I do during an earthquake?'" onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="btn btn-primary" style="flex:0 0 auto;" onclick="sendChat()">Send</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ADMIN DASHBOARD ============ -->
+  <section id="view-admin" class="view">
+
+    <div class="stat-row">
+      <div class="stat"><div class="num" id="stat-total">0</div><div class="label">Total Reports</div></div>
+      <div class="stat"><div class="num" id="stat-high" style="color:var(--high);">0</div><div class="label">High Priority Active</div></div>
+      <div class="stat"><div class="num" id="stat-teams" style="color:var(--medium);">0</div><div class="label">Teams Deployed</div></div>
+      <div class="stat"><div class="num" id="stat-resolved" style="color:var(--low);">0</div><div class="label">Resolved</div></div>
+    </div>
+
+    <div class="grid">
+      <div>
+        <div class="card">
+          <h3><span class="idx">05</span> All Emergency Reports</h3>
+          <div class="filter-bar">
+            <select id="filter-priority" onchange="renderAdminTable()">
+              <option value="all">All priorities</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+            <select id="filter-type" onchange="renderAdminTable()">
+              <option value="all">All types</option>
+              <option>Fire</option><option>Flood</option><option>Earthquake</option><option>Medical</option><option>Accident</option>
+            </select>
+            <select id="filter-status" onchange="renderAdminTable()">
+              <option value="all">All statuses</option>
+              <option>Unassigned</option><option>Team Assigned</option><option>Resolved</option>
+            </select>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th>ID</th><th>Type</th><th>Priority</th><th>Reporter</th><th>Location</th><th>Team</th><th>Status</th></tr></thead>
+              <tbody id="admin-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3><span class="idx">06</span> Analytics</h3>
+          <p class="muted" style="margin-bottom:8px;">Reports by type</p>
+          <svg id="chart-type" width="100%" height="140" viewBox="0 0 500 140"></svg>
+          <div class="divider"></div>
+          <p class="muted" style="margin-bottom:8px;">Reports by priority</p>
+          <svg id="chart-priority" width="100%" height="100" viewBox="0 0 500 100"></svg>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3><span class="idx">07</span> Shelters</h3>
+          <div id="shelter-list"></div>
+        </div>
+        <div class="card">
+          <h3><span class="idx">08</span> Rescue Teams</h3>
+          <div id="team-list"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  RAKSHA — B.Tech IPD Prototype · AI logic runs fully client-side (heuristic simulation) for demo purposes · Not for real emergency use
+</footer>
+
+<div id="toast"></div>
+
+<script>
+/* =========================================================================
+   STATE (in-memory only — no localStorage, per session)
+   ========================================================================= */
+let currentUser = null;
+let reports = [];
+let reportCounter = 1000;
+let uploadedImageMeta = null; // {severityScore, label, dataUrl}
+let recognizing = false;
+let recognition = null;
+
+const teams = [
+  {id:'T1', name:'Alpha Fire & Rescue', specialty:'Fire', status:'Available'},
+  {id:'T2', name:'Flood Response Unit', specialty:'Flood', status:'Available'},
+  {id:'T3', name:'Structural Rescue (Quake)', specialty:'Earthquake', status:'Available'},
+  {id:'T4', name:'Paramedic Squad 1', specialty:'Medical', status:'Available'},
+  {id:'T5', name:'Traffic & Accident Response', specialty:'Accident', status:'Available'},
+];
+
+const shelters = [
+  {name:'Govt. High School Shelter', capacity:200, occupancy:64},
+  {name:'Community Hall - Sector 9', capacity:120, occupancy:112},
+  {name:'Indoor Stadium Relief Camp', capacity:500, occupancy:210},
+];
+
+/* =========================================================================
+   AI ENGINE — rule-based / heuristic prototype
+   In production these functions would call trained NLP/CV models via API.
+   ========================================================================= */
+
+const CATEGORY_KEYWORDS = {
+  Fire:       ['fire','flame','smoke','burning','burn','blaze','gas leak','explosion'],
+  Flood:      ['flood','water level','waterlogged','drowning','overflow','heavy rain','submerged','river rising','dam'],
+  Earthquake: ['earthquake','tremor','shaking','collapsed','building fell','quake','aftershock','cracked wall'],
+  Medical:    ['unconscious','bleeding','heart attack','breathing','pregnant','injured','pain','medical','seizure','stroke','fainted'],
+  Accident:   ['accident','crash','collision','vehicle','road','hit by','overturned','pile up','skid'],
+};
+
+const SEVERITY_BOOST_WORDS = ['trapped','unconscious','children','elderly','collapsed','spreading','multiple people',
+  'not breathing','severe bleeding','stuck','fire spreading','many people','critical','dying','can\'t breathe','baby'];
+
+const CATEGORY_BASE_WEIGHT = {Fire:2, Earthquake:2, Medical:2, Flood:1.5, Accident:1};
+
+function classifyEmergency(text){
+  const t = text.toLowerCase();
+  let scores = {};
+  for(const cat in CATEGORY_KEYWORDS){
+    scores[cat] = CATEGORY_KEYWORDS[cat].reduce((s,k)=> t.includes(k) ? s+1 : s, 0);
+  }
+  let best = 'Medical', bestScore = -1;
+  for(const cat in scores){ if(scores[cat] > bestScore){ bestScore = scores[cat]; best = cat; } }
+  const confidence = bestScore === 0 ? 0.3 : Math.min(0.95, 0.5 + bestScore*0.15);
+  return {category: bestScore===0 ? 'Accident' : best, confidence};
+}
+
+function predictPriority(text, category, imageSeverityScore){
+  const t = text.toLowerCase();
+  let score = CATEGORY_BASE_WEIGHT[category] || 1;
+  SEVERITY_BOOST_WORDS.forEach(w => { if(t.includes(w)) score += 1.3; });
+  if(imageSeverityScore) score += imageSeverityScore/50; // 0-2 range
+  if(text.trim().length < 8) score += 0.3; // terse/urgent messages nudge up slightly
+  let level = 'Low';
+  if(score >= 5) level = 'High';
+  else if(score >= 2.5) level = 'Medium';
+  return {level, score: Math.round(score*10)/10};
+}
+
+const ADVICE = {
+  Fire: {
+    safety: 'Stay low to avoid smoke inhalation. Do not use elevators. Close doors behind you to slow the fire\'s spread.',
+    firstAid: 'For minor burns, cool the area under running water for 10+ minutes. Do not apply ice, butter, or ointments.',
+    evacuation: 'Use the nearest marked exit or stairwell. If trapped, seal gaps under doors with cloth and signal from a window.'
+  },
+  Flood: {
+    safety: 'Move to higher ground immediately. Avoid walking or driving through moving water — 15cm can knock you down.',
+    firstAid: 'Treat hypothermia by removing wet clothes and wrapping the person in dry blankets. Watch for signs of drowning-related distress.',
+    evacuation: 'Follow official evacuation routes. Turn off electricity at the mains if water is entering the building.'
+  },
+  Earthquake: {
+    safety: 'Drop, Cover, and Hold On — get under sturdy furniture and protect your head and neck.',
+    firstAid: 'Control bleeding with firm, direct pressure. Do not move anyone with a suspected spinal injury unless in immediate danger.',
+    evacuation: 'After shaking stops, exit calmly via stairs, watch for aftershocks, and move to an open area away from buildings and power lines.'
+  },
+  Medical: {
+    safety: 'Keep the person calm and still. Do not give food or water if they are unconscious or having trouble breathing.',
+    firstAid: 'Check responsiveness and breathing. If trained, begin CPR for cardiac arrest. Apply pressure to control any bleeding.',
+    evacuation: 'Do not move a seriously injured person unless there is immediate danger. Clear space for paramedics to access them.'
+  },
+  Accident: {
+    safety: 'Turn on hazard lights and set up warning triangles if safe. Keep bystanders away from moving traffic.',
+    firstAid: 'Do not remove a motorcycle helmet unless breathing is blocked. Immobilize visibly injured limbs before help arrives.',
+    evacuation: 'Move to a safe distance from the vehicles, especially if there is fuel leakage or fire risk.'
+  }
+};
+
+function generateAdvice(category){ return ADVICE[category] || ADVICE.Medical; }
+
+// --- Image "analysis" heuristic: samples canvas pixels to estimate a damage-severity proxy ---
+function analyzeImageSeverity(imgEl){
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const w = 80, h = 80;
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(imgEl, 0, 0, w, h);
+    const data = ctx.getImageData(0,0,w,h).data;
+    let totalBrightness = 0, redDom = 0, darkPixels = 0, n = 0;
+    for(let i=0;i<data.length;i+=4){
+      const r=data[i], g=data[i+1], b=data[i+2];
+      const brightness = (r+g+b)/3;
+      totalBrightness += brightness;
+      if(r > g+25 && r > b+25) redDom++;
+      if(brightness < 60) darkPixels++;
+      n++;
+    }
+    const avgBrightness = totalBrightness/n;
+    const redRatio = redDom/n;
+    const darkRatio = darkPixels/n;
+    let severity = (255-avgBrightness)/255*45 + redRatio*100*0.9 + darkRatio*100*0.35;
+    severity = Math.max(4, Math.min(96, Math.round(severity)));
+    let label = 'Minor';
+    if(severity >= 66) label = 'Severe';
+    else if(severity >= 34) label = 'Moderate';
+    resolve({severityScore: severity, label, redRatio, avgBrightness});
+  });
+}
+
+/* =========================================================================
+   AUTH (mock)
+   ========================================================================= */
+function loginUser(){
+  const name = document.getElementById('reg-name').value.trim();
+  const phone = document.getElementById('reg-phone').value.trim();
+  if(!name || phone.length < 8){ showToast('Enter a valid name and phone number.'); return; }
+  currentUser = {name, phone};
+  document.getElementById('login-gate').style.display = 'none';
+  document.getElementById('citizen-app').style.display = 'block';
+  document.getElementById('user-name-display').textContent = name;
+  renderMyReports();
+  showToast('Welcome, '+name+'. You can now report emergencies.');
+}
+function logoutUser(){
+  currentUser = null;
+  document.getElementById('login-gate').style.display = 'block';
+  document.getElementById('citizen-app').style.display = 'none';
+}
+
+/* =========================================================================
+   CITIZEN PORTAL actions
+   ========================================================================= */
+function shareLocation(){
+  if(!navigator.geolocation){ showToast('Geolocation not supported by this browser.'); return; }
+  document.getElementById('report-loc').value = 'Locating…';
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const lat = pos.coords.latitude.toFixed(4), lon = pos.coords.longitude.toFixed(4);
+      document.getElementById('report-loc').value = lat+', '+lon;
+    },
+    () => { document.getElementById('report-loc').value = ''; showToast('Location permission denied. Enter manually or try again.'); }
+  );
+}
+
+function handleImageUpload(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const img = document.getElementById('img-preview');
+    img.src = ev.target.result;
+    document.getElementById('img-preview-wrap').style.display = 'block';
+    document.getElementById('img-analysis').textContent = 'Analyzing image…';
+    img.onload = async function(){
+      const result = await analyzeImageSeverity(img);
+      uploadedImageMeta = {...result, dataUrl: ev.target.result};
+      const color = result.label==='Severe' ? 'var(--high)' : result.label==='Moderate' ? 'var(--medium)' : 'var(--low)';
+      document.getElementById('img-analysis').innerHTML =
+        'Estimated damage severity: <b style="color:'+color+'">'+result.label+' ('+result.severityScore+'/100)</b>'+
+        '<div class="meter"><div class="meter-fill" style="width:'+result.severityScore+'%;background:'+color+'"></div></div>'+
+        '<div class="proto-note">Heuristic pixel-based estimate (brightness / red-channel dominance) for demo purposes. A production system would use a trained CNN damage-assessment model.</div>';
+    };
+  };
+  reader.readAsDataURL(file);
+}
+
+function submitReport(fromSOS){
+  if(!currentUser){ showToast('Please log in first.'); return; }
+  const descEl = document.getElementById('report-desc');
+  const desc = fromSOS ? 'SOS — immediate emergency, no details provided.' : descEl.value.trim();
+  if(!desc){ showToast('Please describe the emergency.'); return; }
+
+  const typeSelect = document.getElementById('report-type').value;
+  const classification = classifyEmergency(desc);
+  const category = fromSOS ? 'Accident' : (typeSelect === 'auto' ? classification.category : typeSelect);
+
+  const imgSeverity = uploadedImageMeta ? uploadedImageMeta.severityScore : 0;
+  let priority = predictPriority(desc, category, imgSeverity);
+  if(fromSOS) priority = {level:'High', score: 9};
+
+  const advice = generateAdvice(category);
+  const loc = document.getElementById('report-loc').value || 'Not shared';
+
+  const report = {
+    id: 'ER-'+(reportCounter++),
+    category, priority: priority.level, priorityScore: priority.score,
+    desc, location: loc, reporter: currentUser.name, phone: currentUser.phone,
+    time: new Date().toLocaleString(),
+    status: 'Unassigned', team: null,
+    imageSeverity: uploadedImageMeta ? uploadedImageMeta.label : null,
+  };
+  reports.unshift(report);
+
+  // reset form
+  if(!fromSOS){
+    descEl.value = '';
+    document.getElementById('report-type').value = 'auto';
+    document.getElementById('img-preview-wrap').style.display = 'none';
+    document.getElementById('img-input').value = '';
+  }
+  uploadedImageMeta = null;
+
+  const color = priority.level==='High' ? 'var(--high)' : priority.level==='Medium' ? 'var(--medium)' : 'var(--low)';
+  document.getElementById('ai-result').innerHTML = `
+    <div class="row" style="margin-bottom:10px;">
+      <div><div class="muted">Detected type</div><div style="font-weight:600;font-size:15px;">${category}</div></div>
+      <div><div class="muted">Priority</div><span class="chip ${priority.level.toLowerCase()}">${priority.level}</span></div>
+    </div>
+    <div class="proto-note" style="margin-top:0;">Classification confidence: ${Math.round(classification.confidence*100)}% · Priority score: ${priority.score}/8 (heuristic keyword + image-severity model)</div>
+    <div class="divider"></div>
+    <div style="font-size:13px;line-height:1.6;">
+      <p><b style="color:var(--signal)">Safety:</b> ${advice.safety}</p>
+      <p><b style="color:var(--signal)">First aid:</b> ${advice.firstAid}</p>
+      <p><b style="color:var(--signal)">Evacuation:</b> ${advice.evacuation}</p>
+    </div>
+    <div class="divider"></div>
+    <p class="muted">Report ${report.id} logged and sent to the Admin Dashboard for rescue-team assignment.</p>
+  `;
+
+  renderMyReports();
+  renderAdminAll();
+  pushTicker(`${report.id} · ${category.toUpperCase()} · ${priority.level.toUpperCase()} PRIORITY · ${loc}`);
+  showToast('Report '+report.id+' submitted — '+priority.level+' priority.');
+}
+
+function fireSOS(){
+  if(!currentUser){ showToast('Please log in first.'); return; }
+  shareLocation();
+  setTimeout(()=> submitReport(true), 600); // give geolocation a moment to resolve
+}
+
+function renderMyReports(){
+  const el = document.getElementById('my-reports');
+  if(!currentUser){ return; }
+  const mine = reports.filter(r => r.phone === currentUser.phone);
+  if(mine.length === 0){ el.innerHTML = '<p class="muted">No reports yet.</p>'; return; }
+  el.innerHTML = mine.map(r => `
+    <div class="report-item">
+      <div class="top">
+        <span class="type">${r.category}</span>
+        <span class="chip ${r.priority.toLowerCase()}">${r.priority}</span>
+      </div>
+      <div class="meta">${r.id} · ${r.time} · Status: ${r.status}${r.team ? ' ('+r.team+')' : ''}</div>
+    </div>
+  `).join('');
+}
+
+/* =========================================================================
+   AI CHAT ASSISTANT
+   ========================================================================= */
+function appendChat(sender, html){
+  const win = document.getElementById('chat-window');
+  const div = document.createElement('div');
+  div.className = 'msg ' + sender;
+  div.innerHTML = html;
+  win.appendChild(div);
+  win.scrollTop = win.scrollHeight;
+}
+
+function botIntro(){
+  appendChat('bot', "Hi, I'm the RAKSHA safety assistant. Ask me about <b>fire</b>, <b>flood</b>, <b>earthquake</b>, <b>medical</b>, or <b>accident</b> situations — or tap a quick option below.");
+}
+
+function quickChat(category){
+  appendChat('user', category);
+  respondChat(category);
+}
+
+function sendChat(){
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if(!text) return;
+  appendChat('user', text);
+  input.value = '';
+  const {category} = classifyEmergency(text);
+  respondChat(category);
+}
+
+function respondChat(category){
+  const advice = generateAdvice(category);
+  appendChat('bot', `<b>${category} guidance</b><br>
+    <b>Safety:</b> ${advice.safety}<br><br>
+    <b>First aid:</b> ${advice.firstAid}<br><br>
+    <b>Evacuation:</b> ${advice.evacuation}`);
+}
+
+/* =========================================================================
+   SPEECH-TO-TEXT
+   ========================================================================= */
+function setupSpeech(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){
+    document.getElementById('mic-status').textContent = 'Voice input not supported in this browser — try Chrome.';
+    return;
+  }
+  recognition = new SR();
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.lang = 'en-IN';
+  recognition.onresult = (e) => {
+    let transcript = '';
+    for(let i=0;i<e.results.length;i++){ transcript += e.results[i][0].transcript; }
+    document.getElementById('report-desc').value = transcript;
+  };
+  recognition.onend = () => {
+    recognizing = false;
+    document.getElementById('mic-btn').classList.remove('listening');
+    document.getElementById('mic-status').textContent = '';
+  };
+  recognition.onerror = () => {
+    recognizing = false;
+    document.getElementById('mic-btn').classList.remove('listening');
+    document.getElementById('mic-status').textContent = 'Voice input error — check microphone permission.';
+  };
+}
+function toggleMic(){
+  if(!recognition){ showToast('Voice input not supported in this browser.'); return; }
+  if(recognizing){ recognition.stop(); return; }
+  recognizing = true;
+  document.getElementById('mic-btn').classList.add('listening');
+  document.getElementById('mic-status').textContent = 'Listening…';
+  recognition.start();
+}
+
+/* =========================================================================
+   ADMIN DASHBOARD
+   ========================================================================= */
+function assignTeam(reportId, teamId){
+  const r = reports.find(x => x.id === reportId);
+  if(!r) return;
+  if(teamId === ''){ r.team = null; r.status = 'Unassigned'; }
+  else{
+    const t = teams.find(x => x.id === teamId);
+    r.team = t.name; r.status = 'Team Assigned';
+  }
+  renderAdminAll();
+  renderMyReports();
+}
+function resolveReport(reportId){
+  const r = reports.find(x => x.id === reportId);
+  if(!r) return;
+  r.status = 'Resolved';
+  renderAdminAll();
+  renderMyReports();
+  showToast(reportId+' marked resolved.');
+}
+
+function renderAdminTable(){
+  const pf = document.getElementById('filter-priority').value;
+  const tf = document.getElementById('filter-type').value;
+  const sf = document.getElementById('filter-status').value;
+  const rows = reports.filter(r =>
+    (pf==='all' || r.priority===pf) &&
+    (tf==='all' || r.category===tf) &&
+    (sf==='all' || r.status===sf)
+  );
+  const tbody = document.getElementById('admin-table-body');
+  if(rows.length === 0){
+    tbody.innerHTML = '<tr><td colspan="7" class="muted" style="padding:16px;">No reports match these filters.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td class="mono">${r.id}</td>
+      <td>${r.category}</td>
+      <td><span class="chip ${r.priority.toLowerCase()}">${r.priority}</span></td>
+      <td>${r.reporter}</td>
+      <td class="mono">${r.location}</td>
+      <td>
+        <select class="assign" onchange="assignTeam('${r.id}', this.value)">
+          <option value="">— Assign —</option>
+          ${teams.map(t=>`<option value="${t.id}" ${r.team===t.name?'selected':''}>${t.name}</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        ${r.status}
+        ${r.status!=='Resolved' ? `<button class="btn btn-sm" style="margin-left:6px;" onclick="resolveReport('${r.id}')">Resolve</button>` : ''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderStats(){
+  document.getElementById('stat-total').textContent = reports.length;
+  document.getElementById('stat-high').textContent = reports.filter(r=>r.priority==='High' && r.status!=='Resolved').length;
+  document.getElementById('stat-teams').textContent = reports.filter(r=>r.team).length;
+  document.getElementById('stat-resolved').textContent = reports.filter(r=>r.status==='Resolved').length;
+}
+
+function renderShelters(){
+  document.getElementById('shelter-list').innerHTML = shelters.map(s => {
+    const pct = Math.round(s.occupancy/s.capacity*100);
+    const color = pct>85 ? 'var(--high)' : pct>60 ? 'var(--medium)' : 'var(--signal)';
+    return `<div class="shelter-item">
+      <div>${s.name}<div class="muted">${s.occupancy}/${s.capacity} occupied</div></div>
+      <div class="shelter-bar"><div class="shelter-fill" style="width:${pct}%;background:${color}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderTeams(){
+  document.getElementById('team-list').innerHTML = teams.map(t => {
+    const deployed = reports.some(r => r.team===t.name && r.status!=='Resolved');
+    return `<div class="shelter-item">
+      <div>${t.name}<div class="muted">${t.specialty} specialist</div></div>
+      <span class="chip ${deployed?'medium':'low'}">${deployed?'Deployed':'Available'}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderCharts(){
+  const types = ['Fire','Flood','Earthquake','Medical','Accident'];
+  const counts = types.map(t => reports.filter(r=>r.category===t).length);
+  const max = Math.max(1, ...counts);
+  const barW = 80, gap = 20;
+  let svg1 = '';
+  types.forEach((t,i)=>{
+    const h = Math.round((counts[i]/max)*90);
+    const x = i*(barW+gap)+20;
+    svg1 += `<rect x="${x}" y="${120-h}" width="${barW}" height="${h}" fill="#2FB8C6" rx="3"/>
+      <text x="${x+barW/2}" y="135" font-size="10" fill="#7C8798" text-anchor="middle" font-family="IBM Plex Mono">${t}</text>
+      <text x="${x+barW/2}" y="${120-h-6}" font-size="11" fill="#E8EDF2" text-anchor="middle" font-family="IBM Plex Mono">${counts[i]}</text>`;
+  });
+  document.getElementById('chart-type').innerHTML = svg1;
+
+  const prios = ['High','Medium','Low'];
+  const pcolors = {High:'#E8452C', Medium:'#E8A93B', Low:'#3BA55D'};
+  const pcounts = prios.map(p => reports.filter(r=>r.priority===p).length);
+  const pmax = Math.max(1, ...pcounts);
+  let svg2 = '';
+  prios.forEach((p,i)=>{
+    const w = Math.round((pcounts[i]/pmax)*380);
+    const y = i*28+8;
+    svg2 += `<text x="0" y="${y+13}" font-size="11" fill="#7C8798" font-family="IBM Plex Mono">${p}</text>
+      <rect x="70" y="${y}" width="${w}" height="16" fill="${pcolors[p]}" rx="3"/>
+      <text x="${80+w}" y="${y+13}" font-size="11" fill="#E8EDF2" font-family="IBM Plex Mono">${pcounts[i]}</text>`;
+  });
+  document.getElementById('chart-priority').innerHTML = svg2;
+}
+
+function renderAdminAll(){
+  renderStats();
+  renderAdminTable();
+  renderCharts();
+}
+
+/* =========================================================================
+   TICKER
+   ========================================================================= */
+let tickerItems = ['System ready — awaiting live emergency reports…'];
+function pushTicker(msg){
+  tickerItems.unshift(msg);
+  if(tickerItems.length > 8) tickerItems.pop();
+  document.getElementById('ticker-track').textContent = tickerItems.join('      •      ');
+}
+
+/* =========================================================================
+   TOAST
+   ========================================================================= */
+let toastTimer;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 3200);
+}
+
+/* =========================================================================
+   TAB NAVIGATION
+   ========================================================================= */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
+  });
+});
+
+/* =========================================================================
+   INIT
+   ========================================================================= */
+function init(){
+  setupSpeech();
+  botIntro();
+  renderShelters();
+  renderTeams();
+  renderAdminAll();
+  pushTicker('System ready — awaiting live emergency reports…');
+}
+init();
+</script>
+</body>
+</html>
